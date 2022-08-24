@@ -180,7 +180,6 @@ void rds_message_put(struct rds_message *rm)
 		rds_message_purge(rm);
 
 		kfree(rm);
-		rm = NULL;
 	}
 }
 EXPORT_SYMBOL_GPL(rds_message_put);
@@ -392,7 +391,7 @@ static int rds_message_zcopy_from_user(struct rds_message *rm, struct iov_iter *
 		size_t start;
 		ssize_t copied;
 
-		copied = iov_iter_get_pages(from, &pages, PAGE_SIZE,
+		copied = iov_iter_get_pages2(from, &pages, PAGE_SIZE,
 					    1, &start);
 		if (copied < 0) {
 			struct mmpin *mmp;
@@ -406,7 +405,6 @@ static int rds_message_zcopy_from_user(struct rds_message *rm, struct iov_iter *
 			goto err;
 		}
 		total_copied += copied;
-		iov_iter_advance(from, copied);
 		length -= copied;
 		sg_set_page(sg, pages, copied, start);
 		rm->data.op_nents++;
