@@ -1185,7 +1185,7 @@ int nfs_flush_incompatible(struct file *file, struct page *page)
 {
 	struct nfs_open_context *ctx = nfs_file_open_context(file);
 	struct nfs_lock_context *l_ctx;
-	struct file_lock_context *flctx = file_inode(file)->i_flctx;
+	struct file_lock_context *flctx = locks_inode_context(file_inode(file));
 	struct nfs_page	*req;
 	int do_flush, status;
 	/*
@@ -1321,7 +1321,7 @@ static int nfs_can_extend_write(struct file *file, struct page *page,
 				struct inode *inode, unsigned int pagelen)
 {
 	int ret;
-	struct file_lock_context *flctx = inode->i_flctx;
+	struct file_lock_context *flctx = locks_inode_context(inode);
 	struct file_lock *fl;
 
 	if (file->f_flags & O_DSYNC)
@@ -1494,31 +1494,6 @@ void nfs_commit_prepare(struct rpc_task *task, void *calldata)
 	struct nfs_commit_data *data = calldata;
 
 	NFS_PROTO(data->inode)->commit_rpc_prepare(task, data);
-}
-
-/*
- * Special version of should_remove_suid() that ignores capabilities.
- */
-static int nfs_should_remove_suid(const struct inode *inode)
-{
-	umode_t mode = inode->i_mode;
-	int kill = 0;
-
-	/* suid always must be killed */
-	if (unlikely(mode & S_ISUID))
-		kill = ATTR_KILL_SUID;
-
-	/*
-	 * sgid without any exec bits is just a mandatory locking mark; leave
-	 * it alone.  If some exec bits are set, it's a real sgid; kill it.
-	 */
-	if (unlikely((mode & S_ISGID) && (mode & S_IXGRP)))
-		kill |= ATTR_KILL_SGID;
-
-	if (unlikely(kill && S_ISREG(mode)))
-		return kill;
-
-	return 0;
 }
 
 static void nfs_writeback_check_extend(struct nfs_pgio_header *hdr,

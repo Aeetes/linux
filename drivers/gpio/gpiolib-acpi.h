@@ -8,7 +8,19 @@
 #ifndef GPIOLIB_ACPI_H
 #define GPIOLIB_ACPI_H
 
+#include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/types.h>
+
+#include <linux/gpio/consumer.h>
+
 struct acpi_device;
+struct device;
+struct fwnode_handle;
+
+struct gpio_chip;
+struct gpio_desc;
+struct gpio_device;
 
 /**
  * struct acpi_gpio_info - ACPI GPIO specific information
@@ -18,6 +30,7 @@ struct acpi_device;
  * @pin_config: pin bias as provided by ACPI
  * @polarity: interrupt polarity as provided by ACPI
  * @triggering: triggering type as provided by ACPI
+ * @wake_capable: wake capability as provided by ACPI
  * @debounce: debounce timeout as provided by ACPI
  * @quirks: Linux specific quirks as provided by struct acpi_gpio_mapping
  */
@@ -28,6 +41,7 @@ struct acpi_gpio_info {
 	int pin_config;
 	int polarity;
 	int triggering;
+	bool wake_capable;
 	unsigned int debounce;
 	unsigned int quirks;
 };

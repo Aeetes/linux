@@ -118,6 +118,12 @@ Text Searching
 CRC and Math Functions in Linux
 ===============================
 
+Arithmetic Overflow Checking
+----------------------------
+
+.. kernel-doc:: include/linux/overflow.h
+   :internal:
+
 CRC Functions
 -------------
 
@@ -164,9 +170,6 @@ Division Functions
 
 .. kernel-doc:: include/linux/math64.h
    :internal:
-
-.. kernel-doc:: lib/math/div64.c
-   :functions: div_s64_rem div64_u64_rem div64_u64 div64_s64
 
 .. kernel-doc:: lib/math/gcd.c
    :export:

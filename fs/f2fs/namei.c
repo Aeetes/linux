@@ -50,7 +50,7 @@ static struct inode *f2fs_new_inode(struct user_namespace *mnt_userns,
 	inode->i_blocks = 0;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
 	F2FS_I(inode)->i_crtime = inode->i_mtime;
-	inode->i_generation = prandom_u32();
+	inode->i_generation = get_random_u32();
 
 	if (S_ISDIR(inode->i_mode))
 		F2FS_I(inode)->i_current_depth = 1;
@@ -845,7 +845,7 @@ out:
 }
 
 static int __f2fs_tmpfile(struct user_namespace *mnt_userns, struct inode *dir,
-			  struct dentry *dentry, umode_t mode, bool is_whiteout,
+			  struct file *file, umode_t mode, bool is_whiteout,
 			  struct inode **new_inode)
 {
 	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
@@ -892,8 +892,8 @@ static int __f2fs_tmpfile(struct user_namespace *mnt_userns, struct inode *dir,
 		inode->i_state |= I_LINKABLE;
 		spin_unlock(&inode->i_lock);
 	} else {
-		if (dentry)
-			d_tmpfile(dentry, inode);
+		if (file)
+			d_tmpfile(file, inode);
 		else
 			f2fs_i_links_write(inode, false);
 	}
@@ -915,16 +915,19 @@ out:
 }
 
 static int f2fs_tmpfile(struct user_namespace *mnt_userns, struct inode *dir,
-			struct dentry *dentry, umode_t mode)
+			struct file *file, umode_t mode)
 {
 	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
+	int err;
 
 	if (unlikely(f2fs_cp_error(sbi)))
 		return -EIO;
 	if (!f2fs_is_checkpoint_ready(sbi))
 		return -ENOSPC;
 
-	return __f2fs_tmpfile(mnt_userns, dir, dentry, mode, false, NULL);
+	err = __f2fs_tmpfile(mnt_userns, dir, file, mode, false, NULL);
+
+	return finish_open_simple(file, err);
 }
 
 static int f2fs_create_whiteout(struct user_namespace *mnt_userns,
@@ -1376,7 +1379,7 @@ const struct inode_operations f2fs_dir_inode_operations = {
 	.tmpfile	= f2fs_tmpfile,
 	.getattr	= f2fs_getattr,
 	.setattr	= f2fs_setattr,
-	.get_acl	= f2fs_get_acl,
+	.get_inode_acl	= f2fs_get_acl,
 	.set_acl	= f2fs_set_acl,
 	.listxattr	= f2fs_listxattr,
 	.fiemap		= f2fs_fiemap,
@@ -1394,7 +1397,7 @@ const struct inode_operations f2fs_symlink_inode_operations = {
 const struct inode_operations f2fs_special_inode_operations = {
 	.getattr	= f2fs_getattr,
 	.setattr	= f2fs_setattr,
-	.get_acl	= f2fs_get_acl,
+	.get_inode_acl	= f2fs_get_acl,
 	.set_acl	= f2fs_set_acl,
 	.listxattr	= f2fs_listxattr,
 };

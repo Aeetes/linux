@@ -14,7 +14,11 @@
 #include "evlist.h"
 #include "evsel.h"
 #include "thread_map.h"
-#include "hashmap.h"
+#ifdef HAVE_LIBBPF_SUPPORT
+#include <bpf/hashmap.h>
+#else
+#include "util/hashmap.h"
+#endif
 #include <linux/zalloc.h>
 
 void update_stats(struct stats *stats, u64 val)
@@ -128,13 +132,9 @@ static void perf_stat_evsel_id_init(struct evsel *evsel)
 
 static void evsel__reset_stat_priv(struct evsel *evsel)
 {
-	int i;
 	struct perf_stat_evsel *ps = evsel->stats;
 
-	for (i = 0; i < 3; i++)
-		init_stats(&ps->res_stats[i]);
-
-	perf_stat_evsel_id_init(evsel);
+	init_stats(&ps->res_stats);
 }
 
 static int evsel__alloc_stat_priv(struct evsel *evsel)
@@ -142,6 +142,7 @@ static int evsel__alloc_stat_priv(struct evsel *evsel)
 	evsel->stats = zalloc(sizeof(struct perf_stat_evsel));
 	if (evsel->stats == NULL)
 		return -ENOMEM;
+	perf_stat_evsel_id_init(evsel);
 	evsel__reset_stat_priv(evsel);
 	return 0;
 }
@@ -277,15 +278,14 @@ void evlist__save_aggr_prev_raw_counts(struct evlist *evlist)
 	}
 }
 
-static size_t pkg_id_hash(const void *__key, void *ctx __maybe_unused)
+static size_t pkg_id_hash(long __key, void *ctx __maybe_unused)
 {
 	uint64_t *key = (uint64_t *) __key;
 
 	return *key & 0xffffffff;
 }
 
-static bool pkg_id_equal(const void *__key1, const void *__key2,
-			 void *ctx __maybe_unused)
+static bool pkg_id_equal(long __key1, long __key2, void *ctx __maybe_unused)
 {
 	uint64_t *key1 = (uint64_t *) __key1;
 	uint64_t *key2 = (uint64_t *) __key2;
@@ -346,11 +346,11 @@ static int check_per_pkg(struct evsel *counter, struct perf_counts_values *vals,
 		return -ENOMEM;
 
 	*key = (uint64_t)d << 32 | s;
-	if (hashmap__find(mask, (void *)key, NULL)) {
+	if (hashmap__find(mask, key, NULL)) {
 		*skip = true;
 		free(key);
 	} else
-		ret = hashmap__add(mask, (void *)key, (void *)1);
+		ret = hashmap__add(mask, key, 1);
 
 	return ret;
 }
@@ -388,12 +388,8 @@ process_counter_values(struct perf_stat_config *config, struct evsel *evsel,
 		}
 
 		if (config->aggr_mode == AGGR_THREAD) {
-			if (config->stats)
-				perf_stat__update_shadow_stats(evsel,
-					count->val, 0, &config->stats[thread]);
-			else
-				perf_stat__update_shadow_stats(evsel,
-					count->val, 0, &rt_stat);
+			perf_stat__update_shadow_stats(evsel, count->val,
+						       thread, &rt_stat);
 		}
 		break;
 	case AGGR_GLOBAL:
@@ -416,9 +412,6 @@ static int process_counter_maps(struct perf_stat_config *config,
 	int ncpus = evsel__nr_cpus(counter);
 	int idx, thread;
 
-	if (counter->core.system_wide)
-		nthreads = 1;
-
 	for (thread = 0; thread < nthreads; thread++) {
 		for (idx = 0; idx < ncpus; idx++) {
 			if (process_counter_values(config, counter, idx, thread,
@@ -436,7 +429,7 @@ int perf_stat_process_counter(struct perf_stat_config *config,
 	struct perf_counts_values *aggr = &counter->counts->aggr;
 	struct perf_stat_evsel *ps = counter->stats;
 	u64 *count = counter->counts->aggr.values;
-	int i, ret;
+	int ret;
 
 	aggr->val = aggr->ena = aggr->run = 0;
 
@@ -454,8 +447,7 @@ int perf_stat_process_counter(struct perf_stat_config *config,
 		evsel__compute_deltas(counter, -1, -1, aggr);
 	perf_counts_values__scale(aggr, config->scale, &counter->counts->scaled);
 
-	for (i = 0; i < 3; i++)
-		update_stats(&ps->res_stats[i], count[i]);
+	update_stats(&ps->res_stats, *count);
 
 	if (verbose > 0) {
 		fprintf(config->output, "%s: %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",

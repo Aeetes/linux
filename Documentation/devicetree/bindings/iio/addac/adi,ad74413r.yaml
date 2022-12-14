@@ -63,6 +63,7 @@ additionalProperties: false
 patternProperties:
   "^channel@[0-3]$":
     type: object
+    additionalProperties: false
     description: Represents the external channels which are connected to the device.
 
     properties:
@@ -113,7 +114,6 @@ examples:
       #size-cells = <0>;
 
       cs-gpios = <&gpio 17 GPIO_ACTIVE_LOW>;
-      status = "okay";
 
       ad74413r@0 {
         compatible = "adi,ad74413r";
