@@ -46,7 +46,7 @@ struct dcn_hubbub_wm_set {
 	uint32_t pte_meta_urgent;
 	uint32_t sr_enter;
 	uint32_t sr_exit;
-	uint32_t dram_clk_chanage;
+	uint32_t dram_clk_change;
 	uint32_t usr_retrain;
 	uint32_t fclk_pstate_change;
 };
@@ -111,6 +111,9 @@ struct dcn_hubbub_state {
 	uint32_t vm_error_vmid;
 	uint32_t vm_error_pipe;
 	uint32_t vm_error_mode;
+	uint32_t test_debug_data;
+	uint32_t watermark_change_cntl;
+	uint32_t dram_state_cntl;
 };
 
 struct hubbub_funcs {
@@ -187,6 +190,7 @@ struct hubbub_funcs {
 	void (*init_crb)(struct hubbub *hubbub);
 	void (*force_usr_retraining_allow)(struct hubbub *hubbub, bool allow);
 	void (*set_request_limit)(struct hubbub *hubbub, int memory_channel_count, int words_per_channel);
+	void (*dchubbub_init)(struct hubbub *hubbub);
 };
 
 struct hubbub {

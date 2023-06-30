@@ -64,7 +64,7 @@ my $type_constant = '\b``([^\`]+)``\b';
 my $type_constant2 = '\%([-_\w]+)';
 my $type_func = '(\w+)\(\)';
 my $type_param = '\@(\w*((\.\w+)|(->\w+))*(\.\.\.)?)';
-my $type_param_ref = '([\!]?)\@(\w*((\.\w+)|(->\w+))*(\.\.\.)?)';
+my $type_param_ref = '([\!~]?)\@(\w*((\.\w+)|(->\w+))*(\.\.\.)?)';
 my $type_fp_param = '\@(\w+)\(\)';  # Special RST handling for func ptr params
 my $type_fp_param2 = '\@(\w+->\S+)\(\)';  # Special RST handling for structs with func ptr params
 my $type_env = '(\$\w+)';
@@ -175,8 +175,8 @@ my $declaration_start_line;
 my ($type, $declaration_name, $return_type);
 my ($newsection, $newcontents, $prototype, $brcount, %source_map);
 
-if (defined($ENV{'KBUILD_VERBOSE'})) {
-	$verbose = "$ENV{'KBUILD_VERBOSE'}";
+if (defined($ENV{'KBUILD_VERBOSE'}) && $ENV{'KBUILD_VERBOSE'} =~ '1') {
+	$verbose = 1;
 }
 
 if (defined($ENV{'KCFLAGS'})) {
@@ -2078,17 +2078,6 @@ sub process_name($$) {
 #
 sub process_body($$) {
     my $file = shift;
-
-    # Until all named variable macro parameters are
-    # documented using the bare name (`x`) rather than with
-    # dots (`x...`), strip the dots:
-    if ($section =~ /\w\.\.\.$/) {
-	$section =~ s/\.\.\.$//;
-
-	if ($verbose) {
-	    emit_warning("${file}:$.", "Variable macro arguments should be documented without dots\n");
-	}
-    }
 
     if ($state == STATE_BODY_WITH_BLANK_LINE && /^\s*\*\s?\S/) {
 	dump_section($file, $section, $contents);

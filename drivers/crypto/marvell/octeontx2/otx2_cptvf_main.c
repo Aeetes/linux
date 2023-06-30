@@ -75,9 +75,9 @@ static int cptvf_pfvf_mbox_init(struct otx2_cptvf_dev *cptvf)
 	resource_size_t offset, size;
 	int ret;
 
-	cptvf->pfvf_mbox_wq = alloc_workqueue("cpt_pfvf_mailbox",
-					      WQ_UNBOUND | WQ_HIGHPRI |
-					      WQ_MEM_RECLAIM, 1);
+	cptvf->pfvf_mbox_wq =
+		alloc_ordered_workqueue("cpt_pfvf_mailbox",
+					WQ_HIGHPRI | WQ_MEM_RECLAIM);
 	if (!cptvf->pfvf_mbox_wq)
 		return -ENOMEM;
 
@@ -428,6 +428,8 @@ static struct pci_driver otx2_cptvf_pci_driver = {
 };
 
 module_pci_driver(otx2_cptvf_pci_driver);
+
+MODULE_IMPORT_NS(CRYPTO_DEV_OCTEONTX2_CPT);
 
 MODULE_AUTHOR("Marvell");
 MODULE_DESCRIPTION("Marvell RVU CPT Virtual Function Driver");
